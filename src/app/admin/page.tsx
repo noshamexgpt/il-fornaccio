@@ -24,13 +24,14 @@ export default async function AdminPage() {
     const stats = await getAdminStats();
 
     const pizzas = await prisma.pizza.findMany({ orderBy: { name: 'asc' } });
+    const ingredients = await prisma.ingredient.findMany({ orderBy: { name: 'asc' } });
 
     return (
         <div className="space-y-8 h-full flex flex-col pt-6">
             <h2 className="text-3xl font-bold font-serif text-white">Tableau de Bord</h2>
             <AdminStats stats={stats} />
             <div className="flex-1 min-h-0">
-                <AdminBoard orders={activeOrders} pizzas={pizzas} />
+                <AdminBoard orders={activeOrders} pizzas={pizzas} ingredients={ingredients} />
             </div>
         </div>
     );

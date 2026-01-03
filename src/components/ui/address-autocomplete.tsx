@@ -68,13 +68,6 @@ export const AddressAutocomplete = forwardRef<HTMLInputElement, AddressAutocompl
                         console.log("Place selected:", place);
 
                         if (place.formatted_address) {
-                            // Manually trigger change event to ensure React Form hooks capture it if needed
-                            if (inputRef.current) {
-                                inputRef.current.value = place.formatted_address;
-                                inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
-                                inputRef.current.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-
                             if (onAddressSelect) {
                                 console.log("Calling onAddressSelect with:", place.formatted_address);
                                 onAddressSelect(place.formatted_address);

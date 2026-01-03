@@ -71,6 +71,12 @@ export async function getAllCustomers() {
         include: {
             _count: {
                 select: { orders: true }
+            },
+            orders: {
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    items: true
+                }
             }
         }
     });
@@ -163,24 +169,28 @@ export async function createManualOrder(data: {
     lastName: string;
     customerPhone: string;
     customerAddress?: string;
-    items: { pizzaId: string; quantity: number }[];
+    items: {
+        pizzaId: string;
+        quantity: number;
+        modifications?: { added: string[]; removed: string[] };
+    }[];
     type: 'takeaway' | 'delivery';
 }) {
     await checkAuth();
     try {
         const PIZZAS = await prisma.pizza.findMany();
-        let finalAddress = data.customerAddress;
-        if (data.type === 'takeaway') {
-            finalAddress = "A emporter (Comptoir)";
-        } else if (!finalAddress || finalAddress.trim() === "") {
-            return { success: false, error: "L'adresse est requise pour la livraison" };
+
+        // Ensure address is present for everyone to avoid duplicates in DB
+        if (!data.customerAddress || data.customerAddress.trim() === "") {
+            return { success: false, error: "L'adresse est requise (même pour à emporter) pour le fichier client." };
         }
+        const finalAddress = data.customerAddress;
 
         const customer = await upsertCustomer(
             data.customerPhone,
             data.firstName,
             data.lastName,
-            data.type === 'delivery' ? data.customerAddress : undefined
+            finalAddress
         );
 
         let orderTotal = 0;
@@ -194,7 +204,7 @@ export async function createManualOrder(data: {
                 pizzaName: pizza.name,
                 basePrice: pizza.basePrice,
                 finalPrice: lineTotal,
-                modifications: JSON.stringify({ removed: [], added: [] }),
+                modifications: item.modifications ? JSON.stringify(item.modifications) : JSON.stringify({ removed: [], added: [] }),
                 quantity: item.quantity
             });
         }
@@ -241,17 +251,16 @@ export async function updateManualOrder(orderId: number, data: {
     await checkAuth();
     try {
         const PIZZAS = await prisma.pizza.findMany();
-        let finalAddress = data.customerAddress;
-        if (data.type === 'takeaway') {
-            finalAddress = "A emporter (Comptoir)";
-        } else if (!finalAddress || finalAddress.trim() === "") {
-            return { success: false, error: "L'adresse est requise pour la livraison" };
+
+        if (!data.customerAddress || data.customerAddress.trim() === "") {
+            return { success: false, error: "L'adresse est requise (même pour à emporter) pour le fichier client." };
         }
+        const finalAddress = data.customerAddress;
 
         const parsed = parsePhoneNumber(data.customerPhone, 'BE');
         const normalizedPhone = parsed ? parsed.number : data.customerPhone;
 
-        await upsertCustomer(normalizedPhone, data.firstName, data.lastName, data.type === 'delivery' ? data.customerAddress : undefined);
+        await upsertCustomer(normalizedPhone, data.firstName, data.lastName, finalAddress);
 
         let orderTotal = 0;
         const validItems: any[] = [];

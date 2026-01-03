@@ -23,6 +23,7 @@ interface Client {
     notes?: string | null;
     orderCount: number;
     updatedAt: string;
+    orders?: any[];
 }
 
 export function ClientsClient({ initialClients }: { initialClients: Client[] }) {
@@ -161,71 +162,114 @@ export function ClientsClient({ initialClients }: { initialClients: Client[] }) 
             </div>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="bg-slate-900 border-slate-800 text-white">
+                <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingClient ? "Modifier Client" : "Nouveau Client"}</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <h3 className="text-lg font-semibold text-orange-400 border-b border-gray-700 pb-2 mb-4">Informations</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Nom</Label>
+                                    <Input
+                                        value={formData.lastName}
+                                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                        className="bg-slate-950 border-slate-800 text-white"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Prénom</Label>
+                                    <Input
+                                        value={formData.firstName}
+                                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                        className="bg-slate-950 border-slate-800 text-white"
+                                        required
+                                    />
+                                </div>
+                            </div>
                             <div>
-                                <Label>Prénom</Label>
+                                <Label>Téléphone</Label>
                                 <Input
-                                    value={formData.firstName}
-                                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     className="bg-slate-950 border-slate-800 text-white"
                                     required
                                 />
                             </div>
                             <div>
-                                <Label>Nom</Label>
-                                <Input
-                                    value={formData.lastName}
-                                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                <Label>Adresse</Label>
+                                <AddressAutocomplete
+                                    value={formData.address}
+                                    onAddressSelect={(addr) => setFormData(prev => ({ ...prev, address: addr }))}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                                     className="bg-slate-950 border-slate-800 text-white"
+                                    placeholder="Rechercher une adresse..."
                                     required
                                 />
                             </div>
-                        </div>
-                        <div>
-                            <Label>Email</Label>
-                            <Input
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="bg-slate-950 border-slate-800 text-white"
-                            />
-                        </div>
-                        <div>
-                            <Label>Téléphone</Label>
-                            <Input
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="bg-slate-950 border-slate-800 text-white"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <Label>Adresse</Label>
-                            <AddressAutocomplete
-                                value={formData.address}
-                                onAddressSelect={(addr) => setFormData(prev => ({ ...prev, address: addr }))}
-                                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                                className="bg-slate-950 border-slate-800 text-white"
-                                placeholder="Rechercher une adresse..."
-                            />
-                        </div>
-                        <div>
-                            <Label>Notes (Interne)</Label>
-                            <Textarea
-                                value={formData.notes}
-                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                className="bg-slate-950 border-slate-800 text-white"
-                            />
-                        </div>
-                        <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
-                            Enregistrer
-                        </Button>
-                    </form>
+                            <div>
+                                <Label>Email</Label>
+                                <Input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className="bg-slate-950 border-slate-800 text-white"
+                                />
+                            </div>
+                            <div>
+                                <Label>Notes (Interne)</Label>
+                                <Textarea
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    className="bg-slate-950 border-slate-800 text-white"
+                                />
+                            </div>
+                            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
+                                Enregistrer
+                            </Button>
+                        </form>
+
+                        {/* History Section */}
+                        {editingClient && (
+                            <div className="space-y-4 border-l border-slate-800 md:pl-6">
+                                <h3 className="text-lg font-semibold text-orange-400 border-b border-gray-700 pb-2">Historique des Commandes</h3>
+                                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin">
+                                    {editingClient.orders && editingClient.orders.length > 0 ? (
+                                        editingClient.orders.map((order: any) => (
+                                            <div key={order.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-sm">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-bold text-white">#{order.id}</span>
+                                                    <span className="text-slate-400 text-xs">{new Date(order.createdAt).toLocaleDateString()} {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-300">
+                                                        <span className="font-semibold text-orange-400">{order.items?.length || 0}</span> pizzas
+                                                    </span>
+                                                    <span className="font-bold text-white">{order.total.toFixed(2)}€</span>
+                                                </div>
+                                                <div className="mt-2 pt-2 border-t border-slate-800/50 flex flex-wrap gap-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${order.status === 'READY' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-400' :
+                                                        order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-400' :
+                                                            'bg-yellow-500/10 text-yellow-400'
+                                                        }`}>
+                                                        {order.status}
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${order.type === 'delivery' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
+                                                        }`}>
+                                                        {order.type === 'delivery' ? 'Livraison' : 'Emporter'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-slate-500 text-center py-8 italic">Ao cune commande enregistrée</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

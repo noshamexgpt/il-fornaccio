@@ -22,6 +22,7 @@ type OrderWithItems = Order & { items: OrderItem[] };
 interface AdminBoardProps {
     orders: OrderWithItems[];
     pizzas: any[]; // using any for now or modify types
+    ingredients: any[];
 }
 
 const COLUMNS = {
@@ -30,7 +31,7 @@ const COLUMNS = {
     READY: { id: "READY", title: "Prêt / Livraison", color: "bg-green-500/10 border-green-500/20", icon: CheckCircle, text: "text-green-400" }
 };
 
-export function AdminBoard({ orders, pizzas }: AdminBoardProps) {
+export function AdminBoard({ orders, pizzas, ingredients }: AdminBoardProps) {
     const router = useRouter();
     const [localOrders, setLocalOrders] = useState(orders);
 
@@ -117,6 +118,7 @@ export function AdminBoard({ orders, pizzas }: AdminBoardProps) {
                                                     <OrderCard
                                                         order={order}
                                                         onViewCustomer={(phone) => setViewingCustomerPhone(phone)}
+                                                        ingredients={ingredients}
                                                     />
                                                 </div>
                                             )}
@@ -134,6 +136,7 @@ export function AdminBoard({ orders, pizzas }: AdminBoardProps) {
                 isOpen={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
                 pizzas={pizzas}
+                ingredients={ingredients}
             />
 
             <OrderModal
@@ -141,6 +144,7 @@ export function AdminBoard({ orders, pizzas }: AdminBoardProps) {
                 onClose={() => setEditingOrder(null)}
                 existingOrder={editingOrder}
                 pizzas={pizzas}
+                ingredients={ingredients}
             />
 
             <CustomerModal

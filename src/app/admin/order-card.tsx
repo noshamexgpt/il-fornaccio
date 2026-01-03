@@ -2,18 +2,24 @@
 
 import { Card } from "@/components/ui/card";
 import { Clock, Phone, MapPin, User } from "lucide-react";
-import { INGREDIENTS } from "@/lib/data";
 
 interface OrderCardProps {
     order: any;
     onViewCustomer: (phone: string) => void;
+    ingredients: any[];
 }
 
 /**
  * OrderCard Component
  * Displays summary of an order in the Kanban board.
  */
-export function OrderCard({ order, onViewCustomer }: OrderCardProps) {
+export function OrderCard({ order, onViewCustomer, ingredients }: OrderCardProps) {
+
+    // Create a lookup map for ingredients
+    const INGREDIENTS_MAP = ingredients.reduce((acc: any, ing: any) => {
+        acc[ing.id] = ing;
+        return acc;
+    }, {});
 
     // Calculate time difference for display
     const timeAgo = (date: Date) => {
@@ -61,12 +67,12 @@ export function OrderCard({ order, onViewCustomer }: OrderCardProps) {
                                 <div className="pl-4 text-xs font-bold tracking-wide mt-1">
                                     {modifs.removed?.map((r: string) => (
                                         <span key={r} className="text-red-500 block">
-                                            - Sans {INGREDIENTS[r]?.name || r}
+                                            - Sans {INGREDIENTS_MAP[r]?.name || r}
                                         </span>
                                     ))}
                                     {modifs.added?.map((a: string) => (
                                         <span key={a} className="text-green-500 block">
-                                            + Avec {INGREDIENTS[a]?.name || a}
+                                            + Avec {INGREDIENTS_MAP[a]?.name || a}
                                         </span>
                                     ))}
                                 </div>

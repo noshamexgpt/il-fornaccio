@@ -6,7 +6,6 @@ import { Plus, X, Loader2, Trash2, ShoppingCart, Edit2, Check, Save, User, Searc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { INGREDIENTS } from "@/lib/data";
 import { createManualOrder, updateManualOrder, searchCustomers } from "@/app/actions";
 
 interface CartItem {
@@ -25,11 +24,18 @@ interface OrderModalProps {
     onClose: () => void;
     existingOrder?: any;
     pizzas: any[];
+    ingredients: any[];
 }
 
-export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModalProps) {
+export function OrderModal({ isOpen, onClose, existingOrder, pizzas, ingredients }: OrderModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Create a lookup map for ingredients
+    const INGREDIENTS_MAP = ingredients.reduce((acc: any, ing: any) => {
+        acc[ing.id] = ing;
+        return acc;
+    }, {});
 
     // Form State
     const [firstName, setFirstName] = useState("");
@@ -128,7 +134,6 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
         setPhone(customer.phone);
         if (customer.address) {
             setAddress(customer.address);
-            setType('delivery');
         }
         setShowResults(false);
         setActiveSearchField(null);
@@ -137,9 +142,9 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
     // Debounce search for Name (First or Last)
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (lastName.length >= 2 && !existingOrder && activeSearchField !== 'phone' && activeSearchField !== 'firstName') {
+            if (lastName.length >= 2 && !existingOrder && activeSearchField === 'lastName') {
                 handleSearch(lastName, 'lastName');
-            } else if (firstName.length >= 2 && !existingOrder && activeSearchField !== 'phone' && activeSearchField !== 'lastName') {
+            } else if (firstName.length >= 2 && !existingOrder && activeSearchField === 'firstName') {
                 handleSearch(firstName, 'firstName');
             }
         }, 500);
@@ -149,7 +154,7 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
     // Debounce search for Phone
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (phone.length >= 2 && !existingOrder && activeSearchField !== 'firstName' && activeSearchField !== 'lastName') {
+            if (phone.length >= 2 && !existingOrder && activeSearchField === 'phone') {
                 handleSearch(phone, 'phone');
             } else if (phone.length < 2 && activeSearchField === 'phone') {
                 setShowResults(false);
@@ -292,29 +297,24 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2 relative">
-                                    <label className="text-sm font-medium text-slate-200">Téléphone</label>
-                                    <div className="relative">
-                                        <Input
-                                            required
-                                            value={phone}
-                                            onChange={(e) => {
-                                                setPhone(e.target.value);
-                                                setActiveSearchField('phone');
-                                                setShowResults(true);
-                                            }}
-                                            onFocus={() => {
-                                                if (searchResults.length > 0 && activeSearchField === 'phone') setShowResults(true);
-                                            }}
-                                            placeholder="Ex: 06..."
-                                            className="bg-slate-800 border-slate-700 text-white pl-8"
-                                            autoComplete="off"
-                                        />
-                                        <Search className="w-4 h-4 text-slate-400 absolute left-2 top-2.5" />
-                                    </div>
-
-                                    {/* Phone Results Dropdown */}
+                                    <label className="text-sm font-medium text-slate-200">Nom</label>
+                                    <Input
+                                        required
+                                        value={lastName}
+                                        onChange={(e) => {
+                                            setLastName(e.target.value);
+                                            setActiveSearchField('lastName');
+                                        }}
+                                        onFocus={() => {
+                                            if (searchResults.length > 0 && activeSearchField === 'lastName') setShowResults(true);
+                                        }}
+                                        placeholder="Ex: Dupuis"
+                                        className="bg-slate-800 border-slate-700 text-white"
+                                        autoComplete="off"
+                                    />
+                                    {/* LastName Search Results */}
                                     <AnimatePresence>
-                                        {showResults && activeSearchField === 'phone' && searchResults.length > 0 && (
+                                        {showResults && activeSearchField === 'lastName' && searchResults.length > 0 && (
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
@@ -328,7 +328,7 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
                                                         onClick={() => selectCustomer(customer)}
                                                         className="w-full text-left px-3 py-2 hover:bg-slate-700 flex flex-col gap-0.5 border-b border-slate-700/50 last:border-0"
                                                     >
-                                                        <span className="text-orange-400 font-bold">{customer.name}</span>
+                                                        <span className="text-orange-400 font-bold">{customer.lastName} {customer.firstName}</span>
                                                         <span className="text-xs text-slate-400">{customer.phone}</span>
                                                     </button>
                                                 ))}
@@ -369,48 +369,7 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
                                                         onClick={() => selectCustomer(customer)}
                                                         className="w-full text-left px-3 py-2 hover:bg-slate-700 flex flex-col gap-0.5 border-b border-slate-700/50 last:border-0"
                                                     >
-                                                        <span className="text-orange-400 font-bold">{customer.name}</span>
-                                                        <span className="text-xs text-slate-400">{customer.phone}</span>
-                                                    </button>
-                                                ))}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                <div className="space-y-2 relative">
-                                    <label className="text-sm font-medium text-slate-200">Nom</label>
-                                    <Input
-                                        required
-                                        value={lastName}
-                                        onChange={(e) => {
-                                            setLastName(e.target.value);
-                                            setActiveSearchField('lastName');
-                                        }}
-                                        onFocus={() => {
-                                            if (searchResults.length > 0 && activeSearchField === 'lastName') setShowResults(true);
-                                        }}
-                                        placeholder="Ex: Dupuis"
-                                        className="bg-slate-800 border-slate-700 text-white"
-                                        autoComplete="off"
-                                    />
-                                    {/* LastName Search Results */}
-                                    <AnimatePresence>
-                                        {showResults && activeSearchField === 'lastName' && searchResults.length > 0 && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-lg z-50 overflow-hidden max-h-48 overflow-y-auto"
-                                            >
-                                                {searchResults.map(customer => (
-                                                    <button
-                                                        key={customer.id}
-                                                        type="button"
-                                                        onClick={() => selectCustomer(customer)}
-                                                        className="w-full text-left px-3 py-2 hover:bg-slate-700 flex flex-col gap-0.5 border-b border-slate-700/50 last:border-0"
-                                                    >
-                                                        <span className="text-orange-400 font-bold">{customer.name}</span>
+                                                        <span className="text-orange-400 font-bold">{customer.lastName} {customer.firstName}</span>
                                                         <span className="text-xs text-slate-400">{customer.phone}</span>
                                                     </button>
                                                 ))}
@@ -420,23 +379,63 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
                                 </div>
                             </div>
 
-                            {type === 'delivery' && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    className="space-y-2"
-                                >
-                                    <label className="text-sm font-medium text-slate-200">Adresse</label>
-                                    <AddressAutocomplete
+                            <div className="space-y-2 relative">
+                                <label className="text-sm font-medium text-slate-200">Téléphone</label>
+                                <div className="relative">
+                                    <Input
                                         required
-                                        value={address}
-                                        onChange={(e) => setAddress(e.target.value)}
-                                        onAddressSelect={(addr) => setAddress(addr)}
-                                        placeholder="Adresse complète"
-                                        className="bg-slate-800 border-slate-700 text-white"
+                                        value={phone}
+                                        onChange={(e) => {
+                                            setPhone(e.target.value);
+                                            setActiveSearchField('phone');
+                                            setShowResults(true);
+                                        }}
+                                        onFocus={() => {
+                                            if (searchResults.length > 0 && activeSearchField === 'phone') setShowResults(true);
+                                        }}
+                                        placeholder="Ex: 06..."
+                                        className="bg-slate-800 border-slate-700 text-white pl-8"
+                                        autoComplete="off"
                                     />
-                                </motion.div>
-                            )}
+                                    <Search className="w-4 h-4 text-slate-400 absolute left-2 top-2.5" />
+                                </div>
+
+                                {/* Phone Results Dropdown */}
+                                <AnimatePresence>
+                                    {showResults && activeSearchField === 'phone' && searchResults.length > 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-lg z-50 overflow-hidden max-h-48 overflow-y-auto"
+                                        >
+                                            {searchResults.map(customer => (
+                                                <button
+                                                    key={customer.id}
+                                                    type="button"
+                                                    onClick={() => selectCustomer(customer)}
+                                                    className="w-full text-left px-3 py-2 hover:bg-slate-700 flex flex-col gap-0.5 border-b border-slate-700/50 last:border-0"
+                                                >
+                                                    <span className="text-orange-400 font-bold">{customer.lastName} {customer.firstName}</span>
+                                                    <span className="text-xs text-slate-400">{customer.phone}</span>
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-200">Adresse</label>
+                                <AddressAutocomplete
+                                    required
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
+                                    onAddressSelect={(addr) => setAddress(addr)}
+                                    placeholder="Adresse complète (Requise pour éviter les doublons)"
+                                    className="bg-slate-800 border-slate-700 text-white"
+                                />
+                            </div>
 
                             <div className="border-t border-slate-800 pt-4 space-y-3">
                                 <label className="text-sm font-medium text-slate-200 flex items-center gap-2">
@@ -495,10 +494,10 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
                                             {(item.modifications.added.length > 0 || item.modifications.removed.length > 0) && (
                                                 <div className="flex flex-wrap gap-1 text-[10px]">
                                                     {item.modifications.removed.map(r => (
-                                                        <span key={r} className="text-red-400 bg-red-400/10 px-1 rounded">- {INGREDIENTS[r]?.name || r}</span>
+                                                        <span key={r} className="text-red-400 bg-red-400/10 px-1 rounded">- {INGREDIENTS_MAP[r]?.name || r}</span>
                                                     ))}
                                                     {item.modifications.added.map(a => (
-                                                        <span key={a} className="text-green-400 bg-green-400/10 px-1 rounded">+ {INGREDIENTS[a]?.name || a}</span>
+                                                        <span key={a} className="text-green-400 bg-green-400/10 px-1 rounded">+ {INGREDIENTS_MAP[a]?.name || a}</span>
                                                     ))}
                                                 </div>
                                             )}
@@ -537,6 +536,7 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
                     onSave={(mods) => updateCartItem(editingItemIndex, mods)}
                     onClose={() => setEditingItemIndex(null)}
                     pizzas={pizzas}
+                    ingredients={ingredients}
                 />
             )}
         </AnimatePresence>
@@ -544,26 +544,18 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas }: OrderModa
 }
 
 // Sub Component for Editing Ingredients
-function IngredientEditor({ item, onSave, onClose, pizzas }: { item: CartItem, onSave: (mods: { added: string[], removed: string[] }) => void, onClose: () => void, pizzas: any[] }) {
+function IngredientEditor({ item, onSave, onClose, pizzas, ingredients }: { item: CartItem, onSave: (mods: { added: string[], removed: string[] }) => void, onClose: () => void, pizzas: any[], ingredients: any[] }) {
     const pizza = pizzas.find(p => p.id === item.pizzaId);
     if (!pizza) return null;
 
-    // pizza.ingredients is JSON string in DB, but prisma might auto-parse if typed? 
-    // Wait, in schema it is String. But previously in file it was string[].
-    // If I fetch from DB, it is a String. I need to JSON.parse it?
-    // In seed script I did JSON.stringify.
-    // So here I must parse it.
     let baseIngredients: string[] = [];
     try {
         if (typeof pizza.ingredients === 'string') {
             baseIngredients = JSON.parse(pizza.ingredients);
         } else {
-            // Fallback if somehow it's already array (unlikely with prisma typed client but possible if I mocked it)
             baseIngredients = pizza.ingredients;
         }
     } catch (e) { baseIngredients = [] }
-
-    const allIngredients = Object.values(INGREDIENTS);
 
     const [removed, setRemoved] = useState<string[]>(item.modifications.removed);
     const [added, setAdded] = useState<string[]>(item.modifications.added);
@@ -612,7 +604,8 @@ function IngredientEditor({ item, onSave, onClose, pizzas }: { item: CartItem, o
                         <h5 className="text-sm font-semibold text-slate-300 mb-2">Ingrédients de base (Décocher pour retirer)</h5>
                         <div className="space-y-2">
                             {baseIngredients.map(ingId => {
-                                const ing = INGREDIENTS[ingId];
+                                // Find ingredient in passed list
+                                const ing = ingredients.find(i => i.id === ingId);
                                 if (!ing) return null;
                                 const isRemoved = removed.includes(ingId);
                                 return (
@@ -636,8 +629,8 @@ function IngredientEditor({ item, onSave, onClose, pizzas }: { item: CartItem, o
                     <div>
                         <h5 className="text-sm font-semibold text-slate-300 mb-2">Suppléments (Cocher pour ajouter)</h5>
                         <div className="grid grid-cols-1 gap-2">
-                            {allIngredients
-                                .filter(ing => !baseIngredients.includes(ing.id))
+                            {ingredients
+                                .filter(ing => !baseIngredients.includes(ing.id) && ing.isAvailable)
                                 .map(ing => {
                                     const isAdded = added.includes(ing.id);
                                     return (
@@ -651,7 +644,7 @@ function IngredientEditor({ item, onSave, onClose, pizzas }: { item: CartItem, o
                                                 checked={isAdded}
                                                 onChange={() => toggleExtra(ing.id)}
                                             />
-                                            <span className={`text-sm ${isAdded ? 'text-orange-300 font-medium' : 'text-slate-400'}`}>{ing.name}</span>
+                                            <span className={`text-sm ${isAdded ? 'text-orange-300 font-medium' : 'text-slate-400'}`}>{ing.name} ({ing.price}€)</span>
                                         </label>
                                     );
                                 })}
