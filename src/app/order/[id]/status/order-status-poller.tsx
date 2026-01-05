@@ -8,9 +8,11 @@ import { getOrderStatus } from "@/app/actions";
 interface OrderStatusPollerProps {
     orderId: number;
     currentStatus: string;
+    driverLat?: number | null;
+    driverLng?: number | null;
 }
 
-export function OrderStatusPoller({ orderId, currentStatus }: OrderStatusPollerProps) {
+export function OrderStatusPoller({ orderId, currentStatus, driverLat, driverLng }: OrderStatusPollerProps) {
     const router = useRouter();
 
     useEffect(() => {
@@ -23,9 +25,17 @@ export function OrderStatusPoller({ orderId, currentStatus }: OrderStatusPollerP
         const interval = setInterval(async () => {
             try {
                 const res = await getOrderStatus(orderId);
-                if (res.success && res.status && res.status !== currentStatus) {
-                    console.log(`Status changed from ${currentStatus} to ${res.status}! Refreshing...`);
-                    router.refresh();
+                if (res.success && res.status) {
+
+                    const statusChanged = res.status !== currentStatus;
+                    const locationChanged =
+                        (res.driverLat !== driverLat && res.driverLat != null) ||
+                        (res.driverLng !== driverLng && res.driverLng != null);
+
+                    if (statusChanged || locationChanged) {
+                        console.log(`Update detected! Status: ${currentStatus}->${res.status}, LocChanged: ${locationChanged}`);
+                        router.refresh();
+                    }
                 }
             } catch (e) {
                 console.error("Status polling error:", e);
@@ -33,7 +43,7 @@ export function OrderStatusPoller({ orderId, currentStatus }: OrderStatusPollerP
         }, 3000); // Check every 3 seconds
 
         return () => clearInterval(interval);
-    }, [orderId, currentStatus, router]);
+    }, [orderId, currentStatus, driverLat, driverLng, router]);
 
     return null;
 }

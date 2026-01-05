@@ -74,7 +74,7 @@ export default async function OrderStatusPage(props: { params: Promise<{ id: str
             {isConfirmed && <CartClearer />}
 
             {/* Global Poller for Status Updates */}
-            {!isCancelled && <OrderStatusPoller orderId={id} currentStatus={order.status} />}
+            {!isCancelled && <OrderStatusPoller orderId={id} currentStatus={order.status} driverLat={order.driverLat} driverLng={order.driverLng} />}
 
             {/* Navbar */}
             <header className="px-6 py-6 flex justify-between items-center max-w-7xl mx-auto w-full z-10">
