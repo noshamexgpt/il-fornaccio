@@ -14,14 +14,28 @@ export default async function Home() {
       <Hero />
 
       {/* Menu Section */}
-      <section id="menu" className="py-24 container mx-auto px-4">
-        <div className="text-center mb-16 space-y-4">
-          <h2 className="text-primary font-medium tracking-widest uppercase text-sm">Notre Carte</h2>
-          <h3 className="text-4xl md:text-5xl font-serif font-bold text-foreground">Les Signatures</h3>
-          <div className="w-24 h-1 bg-primary mx-auto rounded-full" />
+      <section id="menu" className="py-24 relative w-full overflow-hidden">
+        {/* Lux Marble Background */}
+        <div className="absolute inset-0 z-0 select-none pointer-events-none">
+          <Image
+            src="/luxury-marble.jpg"
+            alt="Luxury Marble background"
+            fill
+            className="object-cover opacity-100"
+          />
+          {/* Lighter gradient to let the sharp gold veins pop while keeping text readable */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-black/20 to-background/80" />
         </div>
 
-        <MenuGrid pizzas={pizzas} />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-primary font-medium tracking-widest uppercase text-sm">Notre Carte</h2>
+            <h3 className="text-4xl md:text-5xl font-serif font-bold text-white drop-shadow-lg">Les Signatures</h3>
+            <div className="w-24 h-1 bg-primary mx-auto rounded-full shadow-[0_0_15px_rgba(200,150,50,0.6)]" />
+          </div>
+
+          <MenuGrid pizzas={pizzas} />
+        </div>
       </section>
 
       {/* About Section (Placeholder) */}

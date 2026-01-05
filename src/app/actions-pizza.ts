@@ -1,3 +1,25 @@
+"use server";
+
+import { prisma } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { verifySession } from "@/lib/auth";
+
+/**
+ * Checks if the request is authenticated as an admin.
+ */
+async function checkAuth() {
+    const cookieStore = await cookies();
+    const session = cookieStore.get("admin_session");
+    if (!session) {
+        throw new Error("Unauthorized: Admin session required");
+    }
+    const isValid = await verifySession(session.value);
+    if (!isValid) {
+        throw new Error("Unauthorized: Invalid session");
+    }
+}
+
 /**
  * Pizza Management Actions
  */

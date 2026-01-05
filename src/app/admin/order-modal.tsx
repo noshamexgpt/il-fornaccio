@@ -6,7 +6,7 @@ import { Plus, X, Loader2, Trash2, ShoppingCart, Edit2, Check, Save, User, Searc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { createManualOrder, updateManualOrder, searchCustomers } from "@/app/actions";
+import { createManualOrder, updateManualOrder, searchCustomers, updateOrderStatus } from "@/app/actions";
 
 interface CartItem {
     pizzaId: string;
@@ -241,6 +241,27 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas, ingredients
         setIsLoading(false);
     };
 
+    const handleStatusChange = async (newStatus: string) => {
+        if (!existingOrder) return;
+        setIsLoading(true);
+        const res = await updateOrderStatus(existingOrder.id, newStatus);
+        setIsLoading(false);
+        if (res.success) {
+            onClose(); // Close modal to refresh board
+        } else {
+            setError("Erreur lors de la mise à jour du statut");
+        }
+    };
+
+    const STATUSES = [
+        { id: "PENDING", label: "En Attente", color: "bg-red-500/20 text-red-400 hover:bg-red-500/30" },
+        { id: "CONFIRMED", label: "Confirmée", color: "bg-red-500/20 text-red-400 hover:bg-red-500/30" },
+        { id: "PREPARING", label: "En Cuisine", color: "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30" },
+        { id: "READY", label: "Prête", color: "bg-green-500/20 text-green-400 hover:bg-green-500/30" },
+        { id: "DELIVERING", label: "En Livraison", color: "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30" },
+        { id: "COMPLETED", label: "Terminée", color: "bg-slate-500/20 text-slate-400 hover:bg-slate-500/30" },
+    ];
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -271,6 +292,28 @@ export function OrderModal({ isOpen, onClose, existingOrder, pizzas, ingredients
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Status Quick Actions */}
+                            {existingOrder && (
+                                <div className="bg-slate-950/30 p-3 rounded-lg border border-slate-700/50 mb-4">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Changer le statut</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {STATUSES.map(status => (
+                                            <button
+                                                key={status.id}
+                                                type="button"
+                                                onClick={() => handleStatusChange(status.id)}
+                                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${existingOrder.status === status.id
+                                                        ? 'ring-1 ring-white/50 ' + status.color.replace('/20', '/40')
+                                                        : status.color
+                                                    }`}
+                                            >
+                                                {status.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Type Selection */}
                             <div className="flex bg-slate-800 p-1 rounded-lg">
                                 <button

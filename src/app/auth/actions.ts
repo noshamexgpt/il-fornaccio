@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { compare } from "bcryptjs";
+import { signSession } from "@/lib/auth";
 
 export async function login(formData: FormData) {
     const password = formData.get("password") as string;
@@ -18,8 +19,12 @@ export async function login(formData: FormData) {
 
     if (isValid) {
         const cookieStore = await cookies();
+
+        // Create JWT
+        const token = await signSession({ role: "admin" });
+
         // Set cookie valid for 1 week
-        cookieStore.set("admin_session", "true", {
+        cookieStore.set("admin_session", token, {
             httpOnly: true,
             secure: false, // process.env.NODE_ENV === "production",
             maxAge: 60 * 60 * 24 * 7, // 7 days

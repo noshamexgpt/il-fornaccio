@@ -40,7 +40,13 @@ model Order {
   
   // Order Details
   status       String      @default("PENDING")
+  paymentId    String?     // External Payment ID (Mollie)
   total        Float
+  
+  // Real-time Driver Location
+  driverLat    Float?
+  driverLng    Float?
+  
   items        OrderItem[]
 }
 

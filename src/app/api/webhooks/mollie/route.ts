@@ -21,9 +21,11 @@ export async function POST(req: Request) {
                 where: { id: parseInt(orderId as string) },
                 data: { status: 'CONFIRMED' }
             });
-        } else if (payment.status === 'canceled' || payment.status === 'expired' || payment.status === 'failed') {
-            // Optional: Mark as cancelled or just leave pending
-            // We could mark it as canceled if we want to show it in admin
+        } else if (['canceled', 'expired', 'failed'].includes(payment.status)) {
+            await prisma.order.update({
+                where: { id: parseInt(orderId as string) },
+                data: { status: 'CANCELLED' }
+            });
         }
 
         return NextResponse.json({ received: true });

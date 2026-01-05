@@ -73,7 +73,7 @@ export function AdminBoard({ orders, pizzas, ingredients }: AdminBoardProps) {
 
     const getColumnOrders = (columnId: string) => {
         if (columnId === "PENDING") return localOrders.filter(o => o.status === "PENDING" || o.status === "CONFIRMED");
-        if (columnId === "READY") return localOrders.filter(o => o.status === "READY");
+        if (columnId === "READY") return localOrders.filter(o => o.status === "READY" || o.status === "DELIVERING");
         return localOrders.filter(o => o.status === columnId);
     };
 

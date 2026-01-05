@@ -5,16 +5,22 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { parsePhoneNumber } from "libphonenumber-js";
+import { verifySession } from "@/lib/auth";
+import { mollieClient } from "@/lib/mollie";
 /**
  * Checks if the request is authenticated as an admin.
  * Verifies the presence of the 'admin_session' cookie.
  * @throws {Error} If the user is not authenticated.
  */
-async function checkAuth() {
+export async function checkAuth() {
     const cookieStore = await cookies();
     const session = cookieStore.get("admin_session");
     if (!session) {
         throw new Error("Unauthorized: Admin session required");
+    }
+    const isValid = await verifySession(session.value);
+    if (!isValid) {
+        throw new Error("Unauthorized: Invalid session");
     }
 }
 // Helper to manage customers
@@ -153,9 +159,14 @@ export async function updateOrderStatus(orderId: number, newStatus: string) {
         await checkAuth();
         await prisma.order.update({
             where: { id: orderId },
-            data: { status: newStatus },
+            data: {
+                status: newStatus,
+                updatedAt: new Date() // Force update time
+            },
         });
+        // Revalidate both admin board and the specific order status page
         revalidatePath("/admin");
+        revalidatePath(`/order/${orderId}/status`);
         return { success: true };
     } catch (e) {
         console.error("Status update error:", e);
@@ -344,8 +355,12 @@ export async function getOrderStatus(orderId: number) {
             status: order.status,
             customerName: order.customerName,
             createdAt: order.createdAt,
+            updatedAt: order.updatedAt,
             items: order.items,
-            total: order.total
+            total: order.total,
+            customerAddress: order.customerAddress,
+            driverLat: order.driverLat,
+            driverLng: order.driverLng
         };
     } catch (e) {
         console.error("Tracking Error:", e);
@@ -524,6 +539,7 @@ export async function updateCustomer(id: string, data: {
     }
 }
 
+
 export async function deleteCustomer(id: string) {
     await checkAuth();
     try {
@@ -533,5 +549,107 @@ export async function deleteCustomer(id: string) {
     } catch (e) {
         console.error(e);
         return { success: false, error: "Impossible supprimer client" };
+    }
+}
+
+export async function sendOrderConfirmationEmail(orderId: number) {
+    console.log(`[📧 EMAIL MOCK] Sending confirmation email for Order #${orderId}`);
+    console.log(`[📧 EMAIL MOCK] Content: "Merci pour votre commande ! Votre pizza arrive..."`);
+    return true;
+}
+
+export async function validatePayment(orderId: number) {
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: orderId }
+        });
+
+        if (!order || !order.paymentId) return { success: false };
+
+        // CRITICAL FIX: If order is already in an advanced state, DO NOT revert to CONFIRMED.
+        const advancedStatuses = ['PREPARING', 'READY', 'DELIVERING', 'LIVRAISON', 'COMPLETED', 'ON_THE_WAY'];
+        if (order.status === 'CONFIRMED' || advancedStatuses.includes(order.status.toUpperCase())) {
+            return { success: true, status: order.status };
+        }
+
+        // Check Mollie
+        const payment = await mollieClient.payments.get(order.paymentId);
+
+        if (payment.status === 'paid') {
+            // Only update to CONFIRMED if it was PENDING/CREATED
+            await prisma.order.update({
+                where: { id: orderId },
+                data: { status: 'CONFIRMED' }
+            });
+            await sendOrderConfirmationEmail(orderId);
+            revalidatePath(`/order/${orderId}/status`);
+            return { success: true, status: 'CONFIRMED' };
+        } else if (payment.status === 'canceled' || payment.status === 'expired') {
+            await prisma.order.update({
+                where: { id: orderId },
+                data: { status: 'CANCELLED' }
+            });
+            revalidatePath(`/order/${orderId}/status`);
+            return { success: true, status: 'CANCELLED' };
+        }
+
+        return { success: true, status: order.status };
+
+    } catch (e) {
+        console.error("Payment validation error:", e);
+        return { success: false, error: "Validation failed" };
+    }
+}
+
+export async function updateDriverLocation(orderId: number, lat: number, lng: number) {
+    try {
+        await prisma.order.update({
+            where: { id: orderId },
+            data: {
+                driverLat: lat,
+                driverLng: lng
+            }
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update driver location:", error);
+        return { success: false, error: "Failed to update location" };
+    }
+}
+
+export async function getDriverOrders() {
+    try {
+        const activeStatuses = ['PREPARING', 'READY', 'DELIVERING', 'ON_THE_WAY', 'LIVRAISON'];
+        const orders = await prisma.order.findMany({
+            where: {
+                status: {
+                    in: activeStatuses
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            include: {
+                items: true
+            }
+        });
+
+        // Safe serialization using standard map
+        return {
+            success: true,
+            orders: orders.map(order => ({
+                id: order.id,
+                status: order.status,
+                customerName: order.customerName,
+                customerAddress: order.customerAddress,
+                customerPhone: order.customerPhone,
+                total: order.total,
+                createdAt: order.createdAt,
+                items: order.items
+            }))
+        };
+    } catch (e) {
+        console.error("Failed to fetch driver orders:", e);
+        return { success: false, error: "Impossible de charger les courses" };
     }
 }

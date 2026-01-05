@@ -18,21 +18,35 @@ export async function POST(req: Request) {
         // 2. Format amount to string "10.00"
         const amountValue = order.total.toFixed(2);
 
+        // 2a. Determine Base URL dynamically to handle port changes (e.g. 3000 vs 3002)
+        const host = req.headers.get("host") || "localhost:3000";
+        const protocol = host.includes("localhost") ? "http" : "https";
+        const baseUrl = `${protocol}://${host}`;
+
         // 3. Create payment
         // We set the webhookUrl and redirectUrl. 
         // Note: localhost webhooks won't work without ngrok/tunnel, 
         // but redirect will work.
+        const isLocalhost = baseUrl.includes("localhost");
+        const webhookUrl = isLocalhost ? undefined : `${baseUrl}/api/webhooks/mollie`;
+
         const payment = await mollieClient.payments.create({
             amount: {
                 currency: 'EUR',
                 value: amountValue,
             },
             description: `Commande #${order.id}`,
-            redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/order/${order.id}/status`,
-            webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mollie`,
+            redirectUrl: `${baseUrl}/order/${order.id}/status`,
+            webhookUrl: webhookUrl,
             metadata: {
                 orderId: orderId,
             },
+        });
+
+        // Save paymentId to order for validation on return
+        await prisma.order.update({
+            where: { id: orderId },
+            data: { paymentId: payment.id }
         });
 
         // 4. Return the checkout URL to frontend

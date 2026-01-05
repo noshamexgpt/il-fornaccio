@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Montserrat, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
+const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-cormorant",
+  weight: ["300", "400", "500", "600", "700"]
+});
 
 export const metadata: Metadata = {
   title: "Il Fornaccio - Authentic Neapolitan Pizza",
@@ -17,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="dark">
-      <body className={`${inter.variable} ${playfair.variable} font-sans min-h-screen flex flex-col bg-background text-foreground`}>
+    <html lang="fr" className={`dark ${montserrat.variable} ${cormorant.variable}`}>
+      <body className="font-sans min-h-screen flex flex-col bg-background text-foreground">
         <main className="flex-1">
           {children}
         </main>
